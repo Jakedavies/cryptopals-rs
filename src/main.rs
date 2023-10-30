@@ -1,5 +1,5 @@
 use cryptopals::utils::*;
-use log::{debug, error, info, log_enabled, Level};
+use log::info;
 use std::collections::HashMap;
 
 fn set1_challenge_3() {
@@ -55,11 +55,11 @@ fn set1_challenge_3() {
             winning_char = Some(i);
         }
     }
+
+    let mut output = input.clone();
+    output.xor(&winning_char.expect("No decryption char found"));
     info!("1.3 Winning char: {:?}", winning_char);
-    info!(
-        "1.3 Resulting string: {:?}",
-        String::from_utf8_lossy(input.clone().xor(&winning_char.unwrap()))
-    );
+    info!("1.3 Resulting string: {:?}", output);
 }
 
 fn main() {
