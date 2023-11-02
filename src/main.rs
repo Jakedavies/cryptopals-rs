@@ -16,7 +16,7 @@ fn set1_challenge_4() {
     // read input line by line
     let max = input.lines().fold(DecryptCipherResult::new(), |acc, line| {
         let ciphertext = Vec::<u8>::from_hex(line);
-        acc.max_score(decrypt_single_character_xor(ciphertext))
+        acc.max(decrypt_single_character_xor(ciphertext))
     });
    
     info!("1.4 Resulting string: {}", std::str::from_utf8(&max.decoded).unwrap());

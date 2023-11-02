@@ -47,7 +47,7 @@ impl DecryptCipherResult {
             decoded: Vec::new(),
         }
     }
-    pub fn max_score(self, other: Self) -> Self{
+    pub fn max(self, other: Self) -> Self{
         if self.score > other.score {
             self
         } else {
