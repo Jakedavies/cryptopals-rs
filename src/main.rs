@@ -3,7 +3,6 @@ use cryptopals::frequency::*;
 use log::info;
 
 fn set1_challenge_3() {
-    // find the repeating xor
     let input =
         Vec::<u8>::from_hex("1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736");
     let decrypted = decrypt_single_character_xor(input);
