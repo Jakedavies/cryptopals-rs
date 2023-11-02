@@ -36,7 +36,7 @@ pub fn score_character(char: &char) -> u32 {
 pub struct DecryptCipherResult {
     pub key: u8,
     pub score: u32,
-    pub plaintext: Vec<u8>,
+    pub decoded: Vec<u8>,
 }
 
 impl DecryptCipherResult {
@@ -44,7 +44,7 @@ impl DecryptCipherResult {
         DecryptCipherResult {
             key: 0,
             score: 0,
-            plaintext: Vec::new(),
+            decoded: Vec::new(),
         }
     }
     pub fn max_score(self, other: Self) -> Self{
@@ -62,26 +62,23 @@ impl Default for DecryptCipherResult {
     }
 }
 
-pub fn decrypt_single_character_xor(ciphertext: &Vec<u8>) -> DecryptCipherResult {
-    let mut best_score: u32 = 0;
-    let mut best_key: Option<u8> = None;
+fn score_character_frequency(input: &[u8]) -> u32 {
+    input.iter().fold(0, |acc, byte| {
+        acc + score_character(&(*byte as char))
+    })
+}
 
-    for key in 0..=255 {
-        let score = ciphertext.clone().xor(&key).iter()
-            .fold(0, |acc, byte| {
-            acc + score_character(&(*byte as char))
-        });
-        if score > best_score {
-            best_score = score;
-            best_key = Some(key);
+pub fn decrypt_single_character_xor(ciphertext: Vec<u8>) -> DecryptCipherResult {
+    (0..=255).fold(DecryptCipherResult::new(), |acc, key| {
+        let ciphertext = ciphertext.clone().xor(&key).to_owned();
+        let score = score_character_frequency(ciphertext.as_slice());
+        match score.cmp(&acc.score)  {
+            std::cmp::Ordering::Greater => DecryptCipherResult {
+                key,
+                score,
+                decoded: ciphertext,
+            },
+            _ => acc,
         }
-    }
-
-    let plaintext = ciphertext.clone().xor(&best_key.expect("No decryption key found"));
-    
-    DecryptCipherResult {
-        key: best_key.expect("No decryption key found"),
-        score: best_score,
-        plaintext,
-    }
+    })
 }
