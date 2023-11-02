@@ -10,7 +10,7 @@ const BASE64_CHAR_MAP: [char; 64] = [
 ];
 
 pub trait Xor<T> {
-    fn xor(&mut self, other: &T) -> &mut Self;
+    fn xor(self, other: &T) -> Self;
 }
 
 pub trait Hex {
@@ -72,7 +72,7 @@ impl Base64 for Vec<u8> {
 }
 
 impl Xor<Vec<u8>> for Vec<u8> {
-    fn xor(&mut self, other: &Vec<u8>) -> &mut Self {
+    fn xor(mut self, other: &Vec<u8>) -> Self {
         for (i, byte) in self.iter_mut().enumerate() {
             *byte ^= other[i];
         }
@@ -81,7 +81,7 @@ impl Xor<Vec<u8>> for Vec<u8> {
 }
 
 impl Xor<u8> for Vec<u8> {
-    fn xor(&mut self, other: &u8) -> &mut Self {
+    fn xor(mut self, other: &u8) -> Self {
         for byte in &mut self.iter_mut() {
             *byte ^= other;
         }
@@ -97,7 +97,7 @@ mod tests {
     fn test_xor() {
         let mut hex1 = Vec::<u8>::from_hex("1c0111001f010100061a024b53535009181c");
         let hex2 = Vec::<u8>::from_hex("686974207468652062756c6c277320657965");
-        hex1.xor(&hex2);
+        hex1 = hex1.xor(&hex2);
 
         assert_eq!(hex1, Vec::<u8>::from_hex("746865206b696420646f6e277420706c6179"));
     }
