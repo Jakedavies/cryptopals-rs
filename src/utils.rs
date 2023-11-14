@@ -1,16 +1,11 @@
-const BASE64_CHAR_MAP: [char; 64] = [
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', // 0-7
-    'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', // 8-15
-    'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', // 16-23
-    'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', // 24-31
-    'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', // 32-39
-    'o', 'p', 'q', 'r', 's', 't', 'u', 'v', // 40-47
-    'w', 'x', 'y', 'z', '0', '1', '2', '3', // 48-55
-    '4', '5', '6', '7', '8', '9', '+', '/'  // 56-63
-];
+use base64::{engine::general_purpose, Engine as _};
 
 pub trait Xor<T> {
     fn xor(self, other: &T) -> Self;
+}
+
+pub trait RepeatingKeyXor {
+    fn encrypt_repeating_key_xor(self, key: &[u8]) -> Vec<u8>;
 }
 
 pub trait Hex {
@@ -47,34 +42,23 @@ impl Hex for Vec<u8> {
 
 pub trait Base64 {
     fn to_base64(&self) -> String;
+    fn from_base64(str: &str) -> Self;
 }
 
 impl Base64 for Vec<u8> {
     fn to_base64(&self) -> String {
-        // read 3 bytes at a time
-        // convert to 4 base64 chars
-        // pad with '=' if necessary
-        // return String
-        let mut result = String::new();
-        let mut bytes = self.iter();
-        while let (Some(b1), Some(b2), Some(b3)) = (bytes.next(), bytes.next(), bytes.next()) {
-            let mut index = (b1 & 0b11111100) >> 2;
-            result.push(BASE64_CHAR_MAP[index as usize]);
-            index = (b1 & 0b00000011) << 4 | (b2 & 0b11110000) >> 4;
-            result.push(BASE64_CHAR_MAP[index as usize]);
-            index = (b2 & 0b00001111) << 2 | (b3 & 0b11000000) >> 6;
-            result.push(BASE64_CHAR_MAP[index as usize]);
-            index = b3 & 0b00111111;
-            result.push(BASE64_CHAR_MAP[index as usize]);
-        }
-        result
+        general_purpose::STANDARD.encode(self)
+    }
+
+    fn from_base64(str: &str) -> Self {
+        general_purpose::STANDARD.decode(str).unwrap()
     }
 }
 
 impl Xor<Vec<u8>> for &mut [u8] {
     fn xor(self, other: &Vec<u8>) -> Self {
         for (i, byte) in self.iter_mut().enumerate() {
-            *byte ^= other[i];
+            *byte ^= other[i % other.len()];
         }
         self
     }
@@ -89,6 +73,17 @@ impl Xor<u8> for &mut [u8] {
     }
 }
 
+impl RepeatingKeyXor for &[u8] {
+    fn encrypt_repeating_key_xor(self, key: &[u8]) -> Vec<u8> {
+        self.iter()
+            .enumerate()
+            .fold(Vec::new(), |mut out, (i, byte)| {
+                out.push(byte ^ key[i % key.len()]);
+                out
+            })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -99,12 +94,32 @@ mod tests {
         let hex2 = Vec::<u8>::from_hex("686974207468652062756c6c277320657965");
         hex1 = hex1.xor(&hex2).into();
 
-        assert_eq!(hex1, Vec::<u8>::from_hex("746865206b696420646f6e277420706c6179"));
+        assert_eq!(
+            hex1,
+            Vec::<u8>::from_hex("746865206b696420646f6e277420706c6179")
+        );
     }
 
     #[test]
     fn test_hex_to_base64() {
         let hex = Vec::<u8>::from_hex("49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d");
-        assert_eq!(hex.to_base64(), "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t");
+        assert_eq!(
+            hex.to_base64(),
+            "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t"
+        );
+    }
+
+    #[test]
+    fn repeating_key_xor() {
+        let input = "Burning 'em, if you ain't quick and nimble
+I go crazy when I hear a cymbal"
+            .as_bytes();
+        let key = "ICE";
+        let expected = "0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623\
+                    d63343c2a26226324272765272a282b2f20430a652e2c652a31\
+                    24333a653e2b2027630c692b20283165286326302e27282f";
+
+        let xored = input.encrypt_repeating_key_xor(key.as_bytes());
+        assert_eq!(xored.to_hex(), expected);
     }
 }
