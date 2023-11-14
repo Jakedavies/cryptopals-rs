@@ -107,7 +107,7 @@ pub fn keysize_edit_distance(ciphertext: &[u8], keysize: usize) -> f32 {
 
 pub fn attack_repeating_key_xor(ciphertext: &[u8]) -> Vec<u8> {
     let (keysize, _score) = (2..40)
-        .map(|keysize| (keysize, keysize_edit_distance(&ciphertext, keysize)))
+        .map(|keysize| (keysize, keysize_edit_distance(ciphertext, keysize)))
         .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap()).unwrap();
 
     info!("Keysize: {}", keysize);
