@@ -1,4 +1,5 @@
 use base64::{engine::general_purpose, Engine as _};
+use openssl::{symm::{decrypt, Cipher}, aes::AesKey};
 
 pub trait Xor<T> {
     fn xor(self, other: &T) -> Self;
@@ -82,6 +83,10 @@ impl RepeatingKeyXor for &[u8] {
                 out
             })
     }
+}
+
+pub fn decrypt_aes_128(cipher: &[u8], key: &[u8]) -> Vec<u8> {
+    decrypt(Cipher::aes_128_ecb(), key, None, cipher).unwrap()
 }
 
 #[cfg(test)]

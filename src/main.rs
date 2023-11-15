@@ -44,6 +44,16 @@ fn set1_challenge_6() {
     info!("1.6 key: {}", std::str::from_utf8(&key).unwrap());
 }
 
+fn set1_challenge_7() {
+    let mut input = std::fs::read_to_string("data/7.txt").expect("Unable to read file");
+    input = input.replace('\n', "");
+    let ciphertext = Vec::<u8>::from_base64(&input);
+    let key = "YELLOW SUBMARINE";
+    let decrypted = decrypt_aes_128(&ciphertext, key.as_bytes());
+    info!("1.7 decrypted: \n {}", std::str::from_utf8(&decrypted).unwrap());
+}
+
+
 fn main() {
     env_logger::builder()
         .filter_level(log::LevelFilter::Info)
@@ -60,4 +70,7 @@ fn main() {
 
     info!("Set 1 Challenge 6");
     set1_challenge_6();
+
+    info!("Set 1 Challenge 7");
+    set1_challenge_7();
 }
