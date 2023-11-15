@@ -1,4 +1,5 @@
 use base64::{engine::general_purpose, Engine as _};
+use itertools::Itertools;
 use openssl::{symm::{decrypt, Cipher}, aes::AesKey};
 
 pub trait Xor<T> {
@@ -12,6 +13,10 @@ pub trait RepeatingKeyXor {
 pub trait Hex {
     fn from_hex(str: &str) -> Self;
     fn to_hex(&self) -> String;
+}
+
+pub trait DetectDuplicate {
+    fn contains_duplicates(&self, blocksize: u32) -> bool;
 }
 
 impl Hex for Vec<u8> {
@@ -82,6 +87,13 @@ impl RepeatingKeyXor for &[u8] {
                 out.push(byte ^ key[i % key.len()]);
                 out
             })
+    }
+}
+
+impl DetectDuplicate for &[u8] {
+    fn contains_duplicates(&self, blocksize: u32) -> bool {
+        let chunks = self.chunks(blocksize as usize);
+        chunks.len() > chunks.into_iter().unique().collect_vec().len()
     }
 }
 

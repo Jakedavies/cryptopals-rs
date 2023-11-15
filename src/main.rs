@@ -1,5 +1,6 @@
-use cryptopals::utils::*;
 use cryptopals::attacks::*;
+use cryptopals::utils::*;
+use itertools::Itertools;
 use log::info;
 
 fn set1_challenge_3() {
@@ -7,7 +8,10 @@ fn set1_challenge_3() {
         Vec::<u8>::from_hex("1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736");
     let decrypted = attack_single_character_xor(input);
 
-    info!("1.3 Resulting string: {}", std::str::from_utf8(&decrypted.decoded).unwrap());
+    info!(
+        "1.3 Resulting string: {}",
+        std::str::from_utf8(&decrypted.decoded).unwrap()
+    );
 }
 
 fn set1_challenge_4() {
@@ -18,13 +22,17 @@ fn set1_challenge_4() {
         let ciphertext = Vec::<u8>::from_hex(line);
         acc.max(attack_single_character_xor(ciphertext))
     });
-   
-    info!("1.4 Resulting string: {}", std::str::from_utf8(&max.decoded).unwrap());
+
+    info!(
+        "1.4 Resulting string: {}",
+        std::str::from_utf8(&max.decoded).unwrap()
+    );
 }
 
 fn set1_challenge_5() {
     let input = "Burning 'em, if you ain't quick and nimble
-I go crazy when I hear a cymbal".as_bytes();
+I go crazy when I hear a cymbal"
+        .as_bytes();
     let key = "ICE";
     let expected = "0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623\
                     d63343c2a26226324272765272a282b2f20430a652e2c652a31\
@@ -33,7 +41,6 @@ I go crazy when I hear a cymbal".as_bytes();
     let xored = input.encrypt_repeating_key_xor(key.as_bytes());
     assert_eq!(xored.to_hex(), expected);
 }
-
 
 fn set1_challenge_6() {
     let mut input = std::fs::read_to_string("data/6.txt").expect("Unable to read file");
@@ -50,9 +57,23 @@ fn set1_challenge_7() {
     let ciphertext = Vec::<u8>::from_base64(&input);
     let key = "YELLOW SUBMARINE";
     let decrypted = decrypt_aes_128(&ciphertext, key.as_bytes());
-    info!("1.7 decrypted: \n {}", std::str::from_utf8(&decrypted).unwrap());
+    info!(
+        "1.7 decrypted: \n {}",
+        std::str::from_utf8(&decrypted).unwrap()
+    );
 }
 
+fn set1_challenge_8() {
+    let duplicates = std::fs::read_to_string("data/8.txt")
+        .expect("Unable to read file")
+        .lines()
+        .map(Vec::<u8>::from_hex)
+        .filter(|ciphertext| ciphertext.as_slice().contains_duplicates(16))
+        .map(|ciphertext| ciphertext.to_hex())
+        .collect_vec();
+
+    info!("1.8 ciphertexts with duplicate blocks: {:?}", duplicates);
+}
 
 fn main() {
     env_logger::builder()
@@ -73,4 +94,7 @@ fn main() {
 
     info!("Set 1 Challenge 7");
     set1_challenge_7();
+
+    info!("Set 1 Challenge 8");
+    set1_challenge_8()
 }
