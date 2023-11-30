@@ -1,4 +1,6 @@
 use cryptopals::attacks::*;
+use cryptopals::cbc::cbc_decrypt;
+use cryptopals::pkcs7;
 use cryptopals::utils::*;
 use itertools::Itertools;
 use log::info;
@@ -72,14 +74,36 @@ fn set1_challenge_8() {
         .map(|ciphertext| ciphertext.to_hex())
         .collect_vec();
 
+    let answer = duplicates.first().unwrap();
+
     info!("1.8 ciphertexts with duplicate blocks: {:?}", duplicates);
+}
+
+fn set2_challenge_9() {
+    let input = "YELLOW SUBMARINE";
+    let expected = "YELLOW SUBMARINE\x04\x04\x04\x04";
+    let padded = pkcs7::pad_to_blocksize(input.as_bytes().to_vec(), 20);
+    assert_eq!(std::str::from_utf8(&padded).unwrap(), expected);
+    info!("2.9 padded: {}", std::str::from_utf8(&padded).unwrap());
+}
+
+fn set2_challenge_10() {
+    let mut input = std::fs::read_to_string("data/10.txt").expect("Unable to read file");
+    input = input.replace('\n', "");
+    let ciphertext = Vec::<u8>::from_base64(&input);
+    let key = "YELLOW SUBMARINE";
+    let iv = [0; 16];
+    let decrypted = cbc_decrypt(ciphertext, key.as_bytes(), &iv);
+    info!(
+        "2.10 decrypted: \n {}",
+        std::str::from_utf8(&decrypted).unwrap()
+    );
 }
 
 fn main() {
     env_logger::builder()
         .filter_level(log::LevelFilter::Info)
         .init();
-
     info!("Set 1 Challenge 3");
     set1_challenge_3();
 
@@ -96,5 +120,11 @@ fn main() {
     set1_challenge_7();
 
     info!("Set 1 Challenge 8");
-    set1_challenge_8()
+    set1_challenge_8();
+
+    info!("Set 2 Challenge 9");
+    set2_challenge_9();
+
+    info!("Set 2 Challenge 10");
+    set2_challenge_10();
 }

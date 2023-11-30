@@ -94,8 +94,9 @@ fn hamming_distance(a: &[u8], b: &[u8]) -> u32 {
 }
 
 pub fn keysize_edit_distance(ciphertext: &[u8], keysize: usize) -> f32 {
+    let max_chunks = ciphertext.len() / keysize;
     // take 16 keysize chunks to compare
-    let mut chunks = ciphertext[0..keysize * 16].chunks(keysize);
+    let mut chunks = ciphertext[0..(keysize * 16).min(max_chunks)].chunks(keysize);
     let mut total_distance = 0.;
     let mut total_comparisons = 0; 
     while let (Some(a), Some(b)) = (chunks.next(), chunks.next()) {
@@ -108,7 +109,8 @@ pub fn keysize_edit_distance(ciphertext: &[u8], keysize: usize) -> f32 {
 pub fn attack_repeating_key_xor(ciphertext: &[u8]) -> Vec<u8> {
     let (keysize, _score) = (2..40)
         .map(|keysize| (keysize, keysize_edit_distance(ciphertext, keysize)))
-        .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap()).unwrap();
+        .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+        .unwrap();
 
     info!("Keysize: {}", keysize);
 
