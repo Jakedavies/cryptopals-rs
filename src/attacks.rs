@@ -1,7 +1,6 @@
-use std::{error::Error, str::from_utf8};
+use std::{collections::HashMap, error::Error, str::from_utf8};
 
-use crate::utils::Xor;
-use itertools::Itertools;
+use crate::{oracle::Oracle, utils::DetectDuplicate, utils::Xor};
 use log::info;
 
 pub fn score_character(char: &char) -> u32 {
@@ -98,7 +97,7 @@ pub fn keysize_edit_distance(ciphertext: &[u8], keysize: usize) -> f32 {
     // take 16 keysize chunks to compare
     let mut chunks = ciphertext[0..(keysize * 16).min(max_chunks)].chunks(keysize);
     let mut total_distance = 0.;
-    let mut total_comparisons = 0; 
+    let mut total_comparisons = 0;
     while let (Some(a), Some(b)) = (chunks.next(), chunks.next()) {
         total_distance += hamming_distance(a, b) as f32 / keysize as f32;
         total_comparisons += 1;
@@ -123,6 +122,78 @@ pub fn attack_repeating_key_xor(ciphertext: &[u8]) -> Vec<u8> {
         .into_iter()
         .map(|block| attack_single_character_xor(block).key)
         .collect::<Vec<_>>()
+}
+
+pub fn attack_ecb(oracle: Oracle) -> Vec<u8> {
+    let mut block_size = None;
+    let mut input = "".to_string();
+    let mut length = oracle.encrypt(input.as_bytes()).len();
+    let mut first_increment = None;
+    for i in 1..1024 {
+        input.push('A');
+        // determine block size
+        let cipher = oracle.encrypt(input.as_bytes());
+        if cipher.len() != length {
+            if let Some(_first_increment) = first_increment {
+                block_size = Some((i - _first_increment) as usize);
+                break;
+            } else {
+                length = cipher.len();
+                first_increment = Some(i);
+            }
+        }
+    }
+
+    if block_size.is_none() {
+        panic!("Unable to determine block size");
+    }
+    info!("Block size: {}", block_size.unwrap());
+    let block_size = block_size.unwrap();
+
+    let is_ecb = oracle
+        .encrypt("X".repeat(block_size * 3).as_bytes())
+        .as_slice()
+        .contains_duplicates(block_size as u32);
+
+    if !is_ecb {
+        panic!("Not ECB");
+    }
+
+    let mut output = vec![];
+    // each time we find a character, we rebuild the encryption map using 1 less padding char and
+    // that new known character
+    let mut known: Vec::<u8> = vec![];
+    for i in (0..block_size).rev() {
+        info!("Attacking index {}", i);
+        let mut last_byte_decryption_map: HashMap<u8, u8> = HashMap::new();
+        let mut attack_prefix = "A".repeat(i).as_bytes().to_vec();
+        attack_prefix.extend_from_slice(known.as_slice());
+        println!("Attack prefix: {}", from_utf8(&attack_prefix).unwrap());
+        // for each possible character at this block position, encrypt the attack prefix + that and
+        // build a map of the encrypted byte -> unencrypted byte
+        for char in 0..128 {
+            let mut attack = attack_prefix.clone();
+            attack.push(char);
+            let cipher = oracle.encrypt(&attack);
+            let encrypted_byte = cipher[i];
+            last_byte_decryption_map.insert(encrypted_byte, char);
+        }
+
+        // build a string of
+        let attack_string = "A".repeat(i);
+        let cipher = oracle.encrypt(attack_string.as_bytes());
+        let encrypted_byte = cipher[i];
+        // figure out what the last byte is
+        if let Some(decrypted_byte) = last_byte_decryption_map.get(&encrypted_byte) {
+            println!("Encrypted byte: {} => {}", encrypted_byte, decrypted_byte);
+            known.push(*decrypted_byte);
+        } else {
+            panic!("Unable to decrypt byte");
+        }
+    }
+
+    output.extend_from_slice(known.as_slice());
+    output
 }
 
 #[cfg(test)]

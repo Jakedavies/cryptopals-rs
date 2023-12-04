@@ -6,6 +6,14 @@ use aes::cipher::{
     generic_array::GenericArray,
 };
 
+use crate::pkcs7;
+
+#[derive(PartialEq, Eq, Debug)]
+pub enum CipherMode {
+    ECB,
+    CBC,
+}
+
 pub trait Xor<T> {
     fn xor(self, other: &T) -> Self;
 }
@@ -123,7 +131,25 @@ pub fn encrypt_aes_128(input: &[u8], key: &[u8]) -> Vec<u8> {
         output.extend_from_slice(&chunk);
     });
     output
+}
 
+pub fn padded_encrypt_aes_128(input: &[u8], key: &[u8]) -> Vec<u8> {
+    let padded = pkcs7::pad_to_blocksize(input.to_vec(), 16);
+    encrypt_aes_128(&padded, key)
+}
+
+
+
+pub fn detect_cbc_or_ecb(input: &[u8]) -> CipherMode {
+    if input.contains_duplicates(16) {
+        CipherMode::ECB
+    } else {
+        CipherMode::CBC
+    }
+}
+
+pub fn random_key(size: usize) -> Vec<u8> {
+    (0..size).map(|_| rand::random::<u8>()/2).collect()
 }
 
 

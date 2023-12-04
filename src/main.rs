@@ -1,5 +1,7 @@
 use cryptopals::attacks::*;
 use cryptopals::cbc::cbc_decrypt;
+use cryptopals::cbc::cbc_encrypt;
+use cryptopals::oracle::Oracle;
 use cryptopals::pkcs7;
 use cryptopals::utils::*;
 use itertools::Itertools;
@@ -100,6 +102,33 @@ fn set2_challenge_10() {
     );
 }
 
+
+fn set2_challenge_11() {
+    let input = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+    for _ in 0..100 {
+        let mut input = input.clone().as_bytes().to_vec();
+        input.extend_from_slice(&random_key(rand::random::<usize>() % 6 + 5));
+        let mut random_string = random_key(rand::random::<usize>() % 6 + 5);
+        random_string.extend_from_slice(&input);
+
+        let key = random_key(16);
+        let mode = if rand::random::<bool>() { CipherMode::ECB } else { CipherMode::CBC };
+        let cipher = match mode {
+            CipherMode::ECB => padded_encrypt_aes_128(&random_string, &key),
+            CipherMode::CBC => cbc_encrypt(&random_string, &key, &[0; 16]),
+        };
+
+        assert_eq!(detect_cbc_or_ecb(&cipher), mode);
+    }
+    info!("2.11 Success!");
+}
+
+fn set2_challenge_12() {
+    let oracle = Oracle::new();
+    let secret = attack_ecb(oracle);
+    info!("Secret {}", std::str::from_utf8(&secret).unwrap());
+}
+
 fn main() {
     env_logger::builder()
         .filter_level(log::LevelFilter::Info)
@@ -127,4 +156,10 @@ fn main() {
 
     info!("Set 2 Challenge 10");
     set2_challenge_10();
+
+    info!("Set 2 Challenge 11");
+    set2_challenge_11();
+
+    info!("Set 2 Challenge 12");
+    set2_challenge_12();
 }
