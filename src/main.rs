@@ -126,7 +126,7 @@ fn set2_challenge_11() {
 fn set2_challenge_12() {
     let oracle = Oracle::new();
     let secret = attack_ecb(oracle);
-    info!("Secret {}", std::str::from_utf8(&secret).unwrap());
+    info!("{}", std::str::from_utf8(&secret).unwrap());
 }
 
 fn main() {

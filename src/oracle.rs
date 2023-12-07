@@ -1,6 +1,7 @@
+use std::str::from_utf8;
 use log::info;
 
-use crate::utils::{random_key, encrypt_aes_128, padded_encrypt_aes_128, Base64};
+use crate::utils::{random_key, encrypt_aes_128, padded_encrypt_aes_128, Base64, Hex};
 
 
 pub struct Oracle {
@@ -12,7 +13,8 @@ const MAGIC_STRING: &str = "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24g
 impl Oracle {
     pub fn new() -> Self {
         let key = random_key(16);
-        println!("key: {:?}", key);
+        let key = Vec::<u8>::from_hex("65582b210e550f064039646021533269");
+        println!("key: {:?}", key.to_vec().to_hex());
         Self {
             key,
         }
