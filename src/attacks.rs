@@ -162,37 +162,44 @@ pub fn attack_ecb(oracle: Oracle) -> Vec<u8> {
     let mut output = vec![];
     // each time we find a character, we rebuild the encryption map using 1 less padding char and
     // that new known character
-    let mut known: Vec::<u8> = vec![];
-    for i in (0..block_size).rev() {
-        info!("Attacking index {}", i);
-        let mut last_byte_decryption_map: HashMap<u8, u8> = HashMap::new();
-        let mut attack_prefix = "A".repeat(i).as_bytes().to_vec();
-        attack_prefix.extend_from_slice(known.as_slice());
-        println!("Attack prefix: {}", from_utf8(&attack_prefix).unwrap());
-        // for each possible character at this block position, encrypt the attack prefix + that and
-        // build a map of the encrypted byte -> unencrypted byte
-        for char in 0..128 {
-            let mut attack = attack_prefix.clone();
-            attack.push(char);
-            let cipher = oracle.encrypt(&attack);
-            let encrypted_byte = cipher[i];
-            last_byte_decryption_map.insert(encrypted_byte, char);
-        }
+    let mut chunk_index = 0;
+    let total_chunks = length / block_size;
+    while chunk_index < total_chunks {
+        let mut known: Vec<u8> = vec![];
+        let offset = chunk_index * block_size;
+        for i in (0..block_size).rev() {
+            info!("Attacking index {}", i);
+            let mut last_byte_decryption_map: HashMap<u8, u8> = HashMap::new();
+            let mut attack_prefix = "A".repeat(i).as_bytes().to_vec();
+            attack_prefix.extend_from_slice(output.as_slice());
+            attack_prefix.extend_from_slice(known.as_slice());
+            // for each possible character at this block position, encrypt the attack prefix + that and
+            // build a map of the encrypted byte -> unencrypted byte
+            for char in 0..=255 {
+                let mut attack = attack_prefix.clone();
+                attack.push(char);
+                let cipher = oracle.encrypt(&attack);
+                let encrypted_byte = cipher[i + offset];
+                last_byte_decryption_map.insert(encrypted_byte, char);
+            }
 
-        // build a string of
-        let attack_string = "A".repeat(i);
-        let cipher = oracle.encrypt(attack_string.as_bytes());
-        let encrypted_byte = cipher[i];
-        // figure out what the last byte is
-        if let Some(decrypted_byte) = last_byte_decryption_map.get(&encrypted_byte) {
-            println!("Encrypted byte: {} => {}", encrypted_byte, decrypted_byte);
-            known.push(*decrypted_byte);
-        } else {
-            panic!("Unable to decrypt byte");
+            // build a string of
+            let mut attack_string = "A".repeat(i).as_bytes().to_vec();
+            attack_string.extend_from_slice(output.as_slice());
+            let cipher = oracle.encrypt(&attack_string);
+            let encrypted_byte = cipher[i + offset];
+            // figure out what the last byte is
+            if let Some(decrypted_byte) = last_byte_decryption_map.get(&encrypted_byte) {
+                println!("Encrypted byte: {} => {}", encrypted_byte, decrypted_byte);
+                known.push(*decrypted_byte);
+            } else {
+                panic!("Unable to decrypt byte");
+            }
         }
+        chunk_index += 1;
+        output.extend_from_slice(known.as_slice());
     }
 
-    output.extend_from_slice(known.as_slice());
     output
 }
 
