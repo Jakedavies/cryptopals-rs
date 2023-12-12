@@ -1,6 +1,6 @@
 use std::{collections::HashMap, error::Error, str::from_utf8};
 
-use crate::{oracle::Oracle, utils::DetectDuplicate, utils::Xor};
+use crate::{oracle::Oracle, utils::{DetectDuplicate, Hex}, utils::Xor};
 use log::info;
 
 pub fn score_character(char: &char) -> u32 {
@@ -127,18 +127,19 @@ pub fn attack_repeating_key_xor(ciphertext: &[u8]) -> Vec<u8> {
 pub fn attack_ecb(oracle: Oracle) -> Vec<u8> {
     let mut block_size = None;
     let mut input = "".to_string();
-    let mut length = oracle.encrypt(input.as_bytes()).len();
+    let encrypted_secret  = oracle.encrypt(&[]);
     let mut first_increment = None;
+    let mut tmp_length = encrypted_secret.len();
     for i in 1..1024 {
         input.push('A');
         // determine block size
-        let cipher = oracle.encrypt(input.as_bytes());
-        if cipher.len() != length {
+        let cipher = oracle.encrypt(&input.as_bytes()[..]);
+        if tmp_length != cipher.len() {
             if let Some(_first_increment) = first_increment {
                 block_size = Some((i - _first_increment) as usize);
                 break;
             } else {
-                length = cipher.len();
+                tmp_length = cipher.len();
                 first_increment = Some(i);
             }
         }
@@ -155,49 +156,49 @@ pub fn attack_ecb(oracle: Oracle) -> Vec<u8> {
         .as_slice()
         .contains_duplicates(block_size as u32);
 
+    let mut padding = encrypted_secret.len() % block_size;
+    if padding == 0 {
+        padding = block_size;
+    }
+
     if !is_ecb {
         panic!("Not ECB");
     }
 
     let mut output = vec![];
-    // each time we find a character, we rebuild the encryption map using 1 less padding char and
-    // that new known character
-    let mut chunk_index = 0;
-    let total_chunks = length / block_size;
-    while chunk_index < total_chunks {
+    let mut offset = 0;
+    while offset < encrypted_secret.len() {
+        // each time we find a character, we rebuild the encryption map using 1 less padding char and
+        // that new known character
         let mut known: Vec<u8> = vec![];
-        let offset = chunk_index * block_size;
         for i in (0..block_size).rev() {
-            info!("Attacking index {}", i);
-            let mut last_byte_decryption_map: HashMap<u8, u8> = HashMap::new();
-            let mut attack_prefix = "A".repeat(i).as_bytes().to_vec();
-            attack_prefix.extend_from_slice(output.as_slice());
-            attack_prefix.extend_from_slice(known.as_slice());
-            // for each possible character at this block position, encrypt the attack prefix + that and
-            // build a map of the encrypted byte -> unencrypted byte
-            for char in 0..=255 {
-                let mut attack = attack_prefix.clone();
-                attack.push(char);
-                let cipher = oracle.encrypt(&attack);
-                let encrypted_byte = cipher[i + offset];
-                last_byte_decryption_map.insert(encrypted_byte, char);
+            let index = offset + block_size - i - 1;
+            // don't try to decrypt padding
+            if index >= encrypted_secret.len() - padding {
+                break;
             }
+            let mut attack_prefix: Vec<u8> = "A".repeat(i).as_bytes().to_vec();
+            let encrypted = oracle.encrypt(&attack_prefix);
+            attack_prefix.extend_from_slice(&output[..]);
+            attack_prefix.extend_from_slice(&known[..]);
+            attack_prefix.push(0);
+            assert_eq!(attack_prefix.len(), offset + block_size);
+            let char = (0u8..=128).find(|c| {
+                let len = attack_prefix.len();
+                attack_prefix[len - 1] = c.clone();
+                let cipher = oracle.encrypt(&attack_prefix);
+                cipher[offset..offset+block_size] == encrypted[offset..offset+block_size]
+            });
 
-            // build a string of
-            let mut attack_string = "A".repeat(i).as_bytes().to_vec();
-            attack_string.extend_from_slice(output.as_slice());
-            let cipher = oracle.encrypt(&attack_string);
-            let encrypted_byte = cipher[i + offset];
-            // figure out what the last byte is
-            if let Some(decrypted_byte) = last_byte_decryption_map.get(&encrypted_byte) {
-                println!("Encrypted byte: {} => {}", encrypted_byte, decrypted_byte);
-                known.push(*decrypted_byte);
+            if let Some(c) = char {
+                known.push(c);
             } else {
-                panic!("Unable to decrypt byte");
+                panic!("Unable to find character");
             }
         }
-        chunk_index += 1;
+        offset += block_size;
         output.extend_from_slice(known.as_slice());
+        info!("{}", from_utf8(&output).unwrap());
     }
 
     output

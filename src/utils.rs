@@ -1,3 +1,5 @@
+use std::str::from_utf8;
+
 use base64::{engine::general_purpose, Engine as _};
 use itertools::Itertools;
 use aes::Aes128;
@@ -5,6 +7,7 @@ use aes::cipher::{
     BlockEncrypt, BlockDecrypt, KeyInit,
     generic_array::GenericArray,
 };
+use log::info;
 
 use crate::pkcs7;
 
@@ -69,7 +72,8 @@ impl Base64 for Vec<u8> {
     }
 
     fn from_base64(str: &str) -> Self {
-        general_purpose::STANDARD.decode(str).unwrap()
+        let r = str.replace("\n", "").replace("\r", "");
+        general_purpose::STANDARD.decode(r).unwrap()
     }
 }
 
@@ -139,7 +143,6 @@ pub fn padded_encrypt_aes_128(input: &[u8], key: &[u8]) -> Vec<u8> {
 }
 
 
-
 pub fn detect_cbc_or_ecb(input: &[u8]) -> CipherMode {
     if input.contains_duplicates(16) {
         CipherMode::ECB
@@ -190,5 +193,13 @@ I go crazy when I hear a cymbal"
 
         let xored = input.encrypt_repeating_key_xor(key.as_bytes());
         assert_eq!(xored.to_hex(), expected);
+    }
+
+    #[test]
+    fn encrypt_aes_128() {
+        let input = "Burning 'em, if you ain't quick and nimble
+I go crazy when I hear a cymbal"
+            .as_bytes();
+        let key = "YELLOW SUBMARINE".as_bytes();
     }
 }
