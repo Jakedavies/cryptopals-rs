@@ -170,7 +170,6 @@ pub fn attack_ecb(oracle: Oracle) -> Vec<u8> {
     while offset < encrypted_secret.len() {
         // each time we find a character, we rebuild the encryption map using 1 less padding char and
         // that new known character
-        let mut known: Vec<u8> = vec![];
         for i in (0..block_size).rev() {
             let index = offset + block_size - i - 1;
             // don't try to decrypt padding
@@ -180,10 +179,9 @@ pub fn attack_ecb(oracle: Oracle) -> Vec<u8> {
             let mut attack_prefix: Vec<u8> = "A".repeat(i).as_bytes().to_vec();
             let encrypted = oracle.encrypt(&attack_prefix);
             attack_prefix.extend_from_slice(&output[..]);
-            attack_prefix.extend_from_slice(&known[..]);
             attack_prefix.push(0);
             assert_eq!(attack_prefix.len(), offset + block_size);
-            let char = (0u8..=128).find(|c| {
+            let char = (0u8..=255).find(|c| {
                 let len = attack_prefix.len();
                 attack_prefix[len - 1] = c.clone();
                 let cipher = oracle.encrypt(&attack_prefix);
@@ -191,14 +189,13 @@ pub fn attack_ecb(oracle: Oracle) -> Vec<u8> {
             });
 
             if let Some(c) = char {
-                known.push(c);
+                output.push(c);
             } else {
                 panic!("Unable to find character");
             }
         }
         offset += block_size;
-        output.extend_from_slice(known.as_slice());
-        info!("{}", from_utf8(&output).unwrap());
+        //output.extend_from_slice(known.as_slice());
     }
 
     output
