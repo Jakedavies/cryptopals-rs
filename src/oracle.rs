@@ -1,14 +1,14 @@
 use std::str::from_utf8;
 use log::info;
 
-use crate::utils::{random_key, encrypt_aes_128, padded_encrypt_aes_128, Base64, Hex};
+use crate::utils::{random_key, encrypt_aes_128, padded_encrypt_aes_128, Base64, Hex, decrypt_aes_128, decrypt_aes_128_padded};
 
 
 pub struct Oracle {
     key: Vec<u8>,
+    suffix: Vec<u8>,
 }
 
-const MAGIC_STRING: &str = "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK";
 
 impl Oracle {
     pub fn new() -> Self {
@@ -18,14 +18,24 @@ impl Oracle {
         println!("key: {:?}", key.to_vec().to_hex());
         Self {
             key,
+            suffix: vec![],
         }
 
     }
 
+    pub fn with_prefix(mut self, suffix: &[u8]) -> Self {
+        self.suffix.extend_from_slice(suffix);
+        self
+    }
+
     pub fn encrypt(&self, input: &[u8]) -> Vec<u8> {
         let mut input = input.to_vec();
-        input.extend_from_slice(Vec::<u8>::from_base64(MAGIC_STRING).as_slice());
+        input.extend_from_slice(&self.suffix[..]);
         padded_encrypt_aes_128(&input, &self.key)
+    }
+
+    pub fn decrypt(&self, ciphertext: &[u8]) -> Vec<u8> {
+        decrypt_aes_128_padded(ciphertext, &self.key)
     }
 }
 

@@ -1,6 +1,7 @@
 use cryptopals::attacks::*;
 use cryptopals::cbc::cbc_decrypt;
 use cryptopals::cbc::cbc_encrypt;
+use cryptopals::cookie::ProfileManager;
 use cryptopals::oracle::Oracle;
 use cryptopals::pkcs7;
 use cryptopals::utils::*;
@@ -124,9 +125,17 @@ fn set2_challenge_11() {
 }
 
 fn set2_challenge_12() {
-    let oracle = Oracle::new();
+    const MAGIC_STRING: &str = "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK";
+    let oracle = Oracle::new().with_prefix(&Vec::<u8>::from_base64(MAGIC_STRING)[..]);
     let secret = attack_ecb(oracle);
     info!("{}", std::str::from_utf8(&secret).unwrap());
+}
+
+fn set1_challenge_13() {
+    let profile_manager = ProfileManager::new();
+    let ciphertext = profile_manager.create_profile("jdavies@gmail.com");
+    let cookie = profile_manager.decrypt_profile(&ciphertext);
+    info!("{:?}", cookie);
 }
 
 fn main() {
@@ -162,4 +171,7 @@ fn main() {
 
     info!("Set 2 Challenge 12");
     set2_challenge_12();
+
+    info!("Set 1 Challenge 13");
+    set1_challenge_13();
 }

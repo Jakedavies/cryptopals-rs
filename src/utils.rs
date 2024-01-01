@@ -125,6 +125,18 @@ pub fn decrypt_aes_128(input: &[u8], key: &[u8]) -> Vec<u8> {
     output
 }
 
+pub fn decrypt_aes_128_padded(input: &[u8], key: &[u8]) -> Vec<u8> {
+    let mut output = vec![];
+    let key = GenericArray::clone_from_slice(key);
+    (0..input.len()).step_by(16).for_each(|block| {
+        let mut chunk = GenericArray::clone_from_slice(&input[block..block + 16]);
+        let cipher = Aes128::new(&key);
+        cipher.decrypt_block(&mut chunk);
+        output.extend_from_slice(&chunk);
+    });
+    pkcs7::strip_padding(output)
+}
+
 pub fn encrypt_aes_128(input: &[u8], key: &[u8]) -> Vec<u8> {
     let mut output = vec![];
     let key = GenericArray::clone_from_slice(key);
@@ -141,7 +153,6 @@ pub fn padded_encrypt_aes_128(input: &[u8], key: &[u8]) -> Vec<u8> {
     let padded = pkcs7::pad_to_blocksize(input.to_vec(), 16);
     encrypt_aes_128(&padded, key)
 }
-
 
 pub fn detect_cbc_or_ecb(input: &[u8]) -> CipherMode {
     if input.contains_duplicates(16) {
