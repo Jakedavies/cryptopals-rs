@@ -10,7 +10,7 @@ pub fn pad_to_blocksize(mut bytes: Vec<u8>, blocksize: usize) -> Vec<u8> {
     bytes
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum StripPaddingError {
     InvalidPadding,
 }
@@ -48,4 +48,18 @@ mod tests {
         assert_eq!(padded, expected);
     }
 
+    #[test]
+    fn test_padding_strip_when_valid() {
+        let input = Vec::<u8>::from_hex("F14ADBDA019D6DB7EFD91546E3FF84449BCB0E0E0E0E0E0E0E0E0E0E0E0E0E0E");
+        let expected = Vec::<u8>::from_hex("F14ADBDA019D6DB7EFD91546E3FF84449BCB");
+        let stripped = strip_padding(input).unwrap();
+        assert_eq!(stripped, expected);
+    }
+
+    #[test]
+    fn test_padding_strip_fails_when_invalid() {
+        let input = Vec::<u8>::from_hex("F14ADBDA019D6DB7EFD91546E3FF84449BCB0E0E0E0E0E0E0E0E0E0E0E0E0E0F");
+        let stripped = strip_padding(input);
+        assert_eq!(stripped, Err(StripPaddingError::InvalidPadding));
+    }
 }
