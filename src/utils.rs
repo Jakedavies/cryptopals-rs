@@ -134,7 +134,7 @@ pub fn decrypt_aes_128_padded(input: &[u8], key: &[u8]) -> Vec<u8> {
         cipher.decrypt_block(&mut chunk);
         output.extend_from_slice(&chunk);
     });
-    pkcs7::strip_padding(output)
+    pkcs7::strip_padding(output).expect("Invalid padding")
 }
 
 pub fn encrypt_aes_128(input: &[u8], key: &[u8]) -> Vec<u8> {
@@ -165,6 +165,7 @@ pub fn detect_cbc_or_ecb(input: &[u8]) -> CipherMode {
 pub fn random_key(size: usize) -> Vec<u8> {
     (0..size).map(|_| rand::random::<u8>()/2).collect()
 }
+
 
 
 #[cfg(test)]

@@ -10,10 +10,21 @@ pub fn pad_to_blocksize(mut bytes: Vec<u8>, blocksize: usize) -> Vec<u8> {
     bytes
 }
 
-pub fn strip_padding(mut bytes: Vec<u8>) -> Vec<u8> {
+#[derive(Debug)]
+pub enum StripPaddingError {
+    InvalidPadding,
+}
+
+pub fn strip_padding(mut bytes: Vec<u8>) -> Result<Vec<u8>, StripPaddingError> {
     let padding = bytes.pop().unwrap();
+    // make sure all the last $padding bytes are equal to $padding
+    for i in 0..padding-1 {
+        if bytes[bytes.len() - 1 - i as usize] != padding {
+            return Err(StripPaddingError::InvalidPadding);
+        }
+    }
     bytes.resize(bytes.len() - padding as usize + 1, 0);
-    bytes
+    Ok(bytes)
 }
 
 
