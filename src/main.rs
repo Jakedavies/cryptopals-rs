@@ -1,8 +1,10 @@
+use std::str::from_utf8;
+
 use cryptopals::attacks::*;
 use cryptopals::cbc::cbc_decrypt;
 use cryptopals::cbc::cbc_encrypt;
 use cryptopals::cookie::ProfileManager;
-use cryptopals::oracle::Oracle;
+use cryptopals::oracle::StaticOracle;
 use cryptopals::pkcs7;
 use cryptopals::utils::*;
 use itertools::Itertools;
@@ -126,15 +128,22 @@ fn set2_challenge_11() {
 
 fn set2_challenge_12() {
     const MAGIC_STRING: &str = "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK";
-    let oracle = Oracle::new().with_prefix(&Vec::<u8>::from_base64(MAGIC_STRING)[..]);
+    let oracle = StaticOracle::new().with_prefix(&Vec::<u8>::from_base64(MAGIC_STRING)[..]);
     let secret = attack_ecb(oracle);
     info!("{}", std::str::from_utf8(&secret).unwrap());
 }
 
 fn set1_challenge_13() {
     let profile_manager = ProfileManager::new();
-    let ciphertext = profile_manager.create_profile("jdavies@gmail.com");
-    let cookie = profile_manager.decrypt_profile(&ciphertext);
+    let attack_block: Vec<u8> = pkcs7::pad_to_blocksize("admin".as_bytes().to_vec(), 16);
+    let standard_string = "foooo@bar.com";
+    let attack_string: String = ["foooo@bar.", from_utf8(&attack_block).unwrap(), ".com"].concat();
+    let admin_ciphertext = profile_manager.create_profile(&attack_string);
+    let normal_cipher = profile_manager.create_profile(standard_string);
+    let elevated_cookie = [&normal_cipher[..32], &admin_ciphertext[16..32]].concat();
+    // DO something to the cipher, making us an admin
+    let cookie = profile_manager.decrypt_profile(&elevated_cookie);
+    assert!(ProfileManager::is_admin(&cookie));
     info!("{:?}", cookie);
 }
 

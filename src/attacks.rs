@@ -1,6 +1,6 @@
 use std::{collections::HashMap, error::Error, str::from_utf8};
 
-use crate::{oracle::Oracle, utils::{DetectDuplicate, Hex}, utils::Xor};
+use crate::{oracle::{StaticOracle, Oracle}, utils::{DetectDuplicate, Hex}, utils::Xor};
 use log::info;
 
 pub fn score_character(char: &char) -> u32 {
@@ -124,7 +124,7 @@ pub fn attack_repeating_key_xor(ciphertext: &[u8]) -> Vec<u8> {
         .collect::<Vec<_>>()
 }
 
-pub fn attack_ecb(oracle: Oracle) -> Vec<u8> {
+pub fn attack_ecb(oracle: impl Oracle) -> Vec<u8> {
     let mut block_size = None;
     let mut input = "".to_string();
     let encrypted_secret  = oracle.encrypt(&[]);

@@ -4,13 +4,17 @@ use log::info;
 use crate::utils::{random_key, encrypt_aes_128, padded_encrypt_aes_128, Base64, Hex, decrypt_aes_128, decrypt_aes_128_padded};
 
 
-pub struct Oracle {
+pub struct StaticOracle {
     key: Vec<u8>,
     suffix: Vec<u8>,
 }
 
+pub trait Oracle {
+    fn encrypt(&self, input: &[u8]) -> Vec<u8>;
+}
 
-impl Oracle {
+
+impl StaticOracle {
     pub fn new() -> Self {
         let key = random_key(16);
         //let key = Vec::<u8>::from_hex("65582b210e550f064039646021533269");
@@ -39,13 +43,19 @@ impl Oracle {
     }
 }
 
+impl Oracle for StaticOracle {
+    fn encrypt(&self, input: &[u8]) -> Vec<u8> {
+        self.encrypt(input)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_oracle() {
-        let oracle = Oracle::new();
+        let oracle = StaticOracle::new();
         let known = "Roll";
         let a = oracle.encrypt("AAAAAAAAAAAA".as_bytes());
         let b = oracle.encrypt("AAAAAAAAAAAARoll".as_bytes());
@@ -53,7 +63,7 @@ mod tests {
     }
 
     fn test_oracle_2() {
-        let oracle = Oracle::new();
+        let oracle = StaticOracle::new();
         let known = "Rol";
         let a = oracle.encrypt("AAAAAAAAAAAA".as_bytes());
         let b = oracle.encrypt("AAAAAAAAAAAARoll".as_bytes());

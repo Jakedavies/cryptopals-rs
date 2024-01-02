@@ -12,7 +12,7 @@ pub fn pad_to_blocksize(mut bytes: Vec<u8>, blocksize: usize) -> Vec<u8> {
 
 pub fn strip_padding(mut bytes: Vec<u8>) -> Vec<u8> {
     let padding = bytes.pop().unwrap();
-    bytes.resize(bytes.len() - padding as usize, 0);
+    bytes.resize(bytes.len() - padding as usize + 1, 0);
     bytes
 }
 

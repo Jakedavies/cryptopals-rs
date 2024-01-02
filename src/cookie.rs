@@ -1,22 +1,20 @@
-use std::{collections::HashMap, hash::Hash};
+use std::{collections::HashMap, hash::Hash, str::from_utf8};
 
 use itertools::Itertools;
+use log::info;
 
-use crate::oracle::Oracle;
+use crate::oracle::{StaticOracle, Oracle};
 
 #[derive(Debug, PartialEq)]
-pub struct Cookie(HashMap<String, String>);
+pub struct Cookie(pub HashMap<String, String>);
 
 fn encode(s: Cookie) -> String {
-    s.0.iter()
-        .sorted()
-        .map(|(key, value)| {
-        format!("{}={}", key, value)
-    }).join("&")
+    format!("email={}&uid={}&role={}", s.0["email"], s.0["uid"], s.0["role"])
 } 
 
 // foo=bar&baz=qux&zap=zazzle
 fn decode(s: &str) -> Cookie {
+    println!("s: {}", s);
     let c = s.split("&").fold(HashMap::new(), |mut result, pair| {
         let mut key_value = pair.split("=");
         let key = key_value.next().unwrap();
@@ -37,27 +35,38 @@ fn profile_for(email: &str) -> Cookie {
 }
 
 pub struct ProfileManager {
-    oracle: Oracle,
+    oracle: StaticOracle,
 }
 
 impl ProfileManager {
     pub fn new() -> Self {
         ProfileManager {
-            oracle: Oracle::new(),
+            oracle: StaticOracle::new(),
         }
     }
 
     pub fn create_profile(&self, email: &str) -> Vec<u8> {
         let cookie = profile_for(email);
-        self.oracle.encrypt(&encode(cookie).as_bytes()[..])
+        let encoded = encode(cookie);
+        self.oracle.encrypt(encoded.as_bytes())
     }
 
     pub fn decrypt_profile(&self, ciphertext: &[u8]) -> Cookie {
         let plaintext = self.oracle.decrypt(ciphertext);
         decode(&String::from_utf8(plaintext).unwrap())
     }
+
+    pub fn is_admin(cookie: &Cookie) -> bool {
+        cookie.0.get("role").unwrap() == "admin"
+    }
 }
 
+impl Oracle for ProfileManager {
+    fn encrypt(&self, input: &[u8]) -> Vec<u8> {
+        println!("input: {:?}", input);
+        self.create_profile(from_utf8(input).unwrap())
+    }
+}
 
 #[cfg(test)]
 mod tests {
