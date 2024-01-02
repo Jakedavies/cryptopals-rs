@@ -5,7 +5,7 @@ use crate::{
     utils::Xor,
     utils::{DetectDuplicate, Hex},
 };
-use log::info;
+use log::{info, warn};
 
 pub fn score_character(char: &char) -> u32 {
     match char {

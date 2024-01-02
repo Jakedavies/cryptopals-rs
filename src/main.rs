@@ -149,7 +149,7 @@ fn set1_challenge_13() {
 }
 
 fn set1_challenge_14() {
-    const TARGET: &str = "target-string";
+    const TARGET: &str = "target-str";
     const PREFIX: &str = "prefix";
     let oracle = StaticOracle::new()
         .with_prefix(PREFIX.as_bytes())
@@ -157,6 +157,7 @@ fn set1_challenge_14() {
 
     let secret = attack_ecb(oracle);
     info!("target: {}", std::str::from_utf8(&secret).unwrap());
+    assert_eq!(&secret[0..TARGET.len()], TARGET.as_bytes());
 }
 
 fn main() {
