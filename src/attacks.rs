@@ -1,6 +1,10 @@
 use std::{collections::HashMap, error::Error, str::from_utf8};
 
-use crate::{oracle::{StaticOracle, Oracle}, utils::{DetectDuplicate, Hex}, utils::Xor};
+use crate::{
+    oracle::{Oracle, StaticOracle},
+    utils::Xor,
+    utils::{DetectDuplicate, Hex},
+};
 use log::info;
 
 pub fn score_character(char: &char) -> u32 {
@@ -124,16 +128,40 @@ pub fn attack_repeating_key_xor(ciphertext: &[u8]) -> Vec<u8> {
         .collect::<Vec<_>>()
 }
 
+pub fn get_prefix_length(block_size: usize, oracle: &impl Oracle) -> usize {
+    let mut prefix_padding = 0;
+    let test_string = "B".repeat(block_size * 2);
+    while prefix_padding <= block_size {
+        // if we can detect two identical blocks, then this must be the correct prefix padding
+        // step 1 block at a time
+        let mut prefix = "A".repeat(prefix_padding).as_bytes().to_vec();
+        prefix.extend_from_slice(test_string.as_bytes());
+        let cipher = oracle.encrypt(&prefix);
+        let blocks = cipher.chunks(block_size).collect::<Vec<_>>();
+        for i in 1..blocks.len() {
+            if blocks[i - 1] == blocks[i] {
+                return (i-1) * block_size - prefix_padding;
+            }
+        }
+        prefix_padding += 1;
+    }
+    panic!("Unable to determine prefix length");
+}
+
 pub fn attack_ecb(oracle: impl Oracle) -> Vec<u8> {
     let mut block_size = None;
+    // first determine the prefix length and pad it out
+    let encrypted_secret = oracle.encrypt(&[]);
+    info!("encrypted_secret: {:?}", encrypted_secret.to_hex());
+
     let mut input = "".to_string();
-    let encrypted_secret  = oracle.encrypt(&[]);
+
     let mut first_increment = None;
     let mut tmp_length = encrypted_secret.len();
     for i in 1..1024 {
         input.push('A');
         // determine block size
-        let cipher = oracle.encrypt(&input.as_bytes()[..]);
+        let cipher = oracle.encrypt(input.as_bytes());
         if tmp_length != cipher.len() {
             if let Some(_first_increment) = first_increment {
                 block_size = Some((i - _first_increment) as usize);
@@ -148,8 +176,14 @@ pub fn attack_ecb(oracle: impl Oracle) -> Vec<u8> {
     if block_size.is_none() {
         panic!("Unable to determine block size");
     }
+
     info!("Block size: {}", block_size.unwrap());
     let block_size = block_size.unwrap();
+
+    let prefix_length = get_prefix_length(block_size, &oracle);
+    let skip_length = (prefix_length / block_size) + block_size;
+
+    let constant_prefix = "B".repeat(prefix_length % block_size);
 
     let is_ecb = oracle
         .encrypt("X".repeat(block_size * 3).as_bytes())
@@ -174,7 +208,9 @@ pub fn attack_ecb(oracle: impl Oracle) -> Vec<u8> {
             if index >= encrypted_secret.len() - padding {
                 break;
             }
-            let mut attack_prefix: Vec<u8> = "A".repeat(i).as_bytes().to_vec();
+            let mut attack_prefix: Vec<u8> = "".as_bytes().to_vec();
+            attack_prefix.extend_from_slice(constant_prefix.clone().as_bytes());
+            attack_prefix.extend_from_slice("A".repeat(i).as_bytes());
             let encrypted = oracle.encrypt(&attack_prefix);
             attack_prefix.extend_from_slice(&output[..]);
             attack_prefix.push(0);
@@ -183,7 +219,7 @@ pub fn attack_ecb(oracle: impl Oracle) -> Vec<u8> {
                 let len = attack_prefix.len();
                 attack_prefix[len - 1] = c.clone();
                 let cipher = oracle.encrypt(&attack_prefix);
-                cipher[offset..offset+block_size] == encrypted[offset..offset+block_size]
+                cipher[offset..offset + block_size] == encrypted[offset..offset + block_size]
             });
 
             if let Some(c) = char {
@@ -207,5 +243,11 @@ mod tests {
         let a = "this is a test".as_bytes();
         let b = "wokka wokka!!!".as_bytes();
         assert_eq!(hamming_distance(a, b), 37);
+    }
+
+    #[test]
+    fn test_get_prefix_length() {
+        let oracle = StaticOracle::new().with_prefix("SUBMARINE SUBMARINE".as_bytes());
+        assert_eq!(get_prefix_length(16, &oracle), 19);
     }
 }

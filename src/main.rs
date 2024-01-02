@@ -128,9 +128,10 @@ fn set2_challenge_11() {
 
 fn set2_challenge_12() {
     const MAGIC_STRING: &str = "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK";
-    let oracle = StaticOracle::new().with_prefix(&Vec::<u8>::from_base64(MAGIC_STRING)[..]);
+    let oracle = StaticOracle::new().with_suffix(&Vec::<u8>::from_base64(MAGIC_STRING)[..]);
     let secret = attack_ecb(oracle);
     info!("{}", std::str::from_utf8(&secret).unwrap());
+    assert!(std::str::from_utf8(&secret).unwrap().contains("Rollin"));
 }
 
 fn set1_challenge_13() {
@@ -145,6 +146,18 @@ fn set1_challenge_13() {
     let cookie = profile_manager.decrypt_profile(&elevated_cookie);
     assert!(ProfileManager::is_admin(&cookie));
     info!("{:?}", cookie);
+}
+
+fn set1_challenge_14() {
+    const TARGET: &str = "target-string";
+    const PREFIX: &str = "prefix";
+    let oracle = StaticOracle::new()
+        .with_prefix(PREFIX.as_bytes())
+        .with_suffix(TARGET.as_bytes());
+
+    info!("target!");
+    let secret = attack_ecb(oracle);
+    info!("{}", std::str::from_utf8(&secret).unwrap());
 }
 
 fn main() {
@@ -183,4 +196,7 @@ fn main() {
 
     info!("Set 1 Challenge 13");
     set1_challenge_13();
+
+    info!("Set 1 Challenge 14");
+    set1_challenge_14();
 }

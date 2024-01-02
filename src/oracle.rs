@@ -7,6 +7,7 @@ use crate::utils::{random_key, encrypt_aes_128, padded_encrypt_aes_128, Base64, 
 pub struct StaticOracle {
     key: Vec<u8>,
     suffix: Vec<u8>,
+    prefix: Vec<u8>,
 }
 
 pub trait Oracle {
@@ -22,20 +23,27 @@ impl StaticOracle {
         println!("key: {:?}", key.to_vec().to_hex());
         Self {
             key,
+            prefix: vec![],
             suffix: vec![],
         }
 
     }
 
-    pub fn with_prefix(mut self, suffix: &[u8]) -> Self {
+    pub fn with_suffix(mut self, suffix: &[u8]) -> Self {
         self.suffix.extend_from_slice(suffix);
         self
     }
 
+    pub fn with_prefix(mut self, suffix: &[u8]) -> Self {
+        self.prefix.extend_from_slice(suffix);
+        self
+    }
+
     pub fn encrypt(&self, input: &[u8]) -> Vec<u8> {
-        let mut input = input.to_vec();
-        input.extend_from_slice(&self.suffix[..]);
-        padded_encrypt_aes_128(&input, &self.key)
+        let mut i = self.prefix.clone();
+        i.extend_from_slice(input);
+        i.extend_from_slice(&self.suffix[..]);
+        padded_encrypt_aes_128(&i, &self.key)
     }
 
     pub fn decrypt(&self, ciphertext: &[u8]) -> Vec<u8> {
