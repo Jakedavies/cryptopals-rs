@@ -152,7 +152,6 @@ pub fn attack_ecb(oracle: impl Oracle) -> Vec<u8> {
     let mut block_size = None;
     // first determine the prefix length and pad it out
     let encrypted_secret = oracle.encrypt(&[]);
-    info!("encrypted_secret: {:?}", encrypted_secret.to_hex());
 
     let mut input = "".to_string();
 
@@ -177,44 +176,39 @@ pub fn attack_ecb(oracle: impl Oracle) -> Vec<u8> {
         panic!("Unable to determine block size");
     }
 
-    info!("Block size: {}", block_size.unwrap());
     let block_size = block_size.unwrap();
 
     let prefix_length = get_prefix_length(block_size, &oracle);
-    let skip_length = (prefix_length / block_size) + block_size;
 
-    let constant_prefix = "B".repeat(prefix_length % block_size);
+    // skip forward to the next whole block starting index
+    let mut prefix_padding = block_size - (prefix_length % block_size);
+    if prefix_padding == block_size {
+        prefix_padding = 0;
+    }
+    let skip_length = prefix_length + prefix_padding;
+
+    let constant_prefix = "B".repeat(prefix_padding);
 
     let is_ecb = oracle
         .encrypt("X".repeat(block_size * 3).as_bytes())
         .as_slice()
         .contains_duplicates(block_size as u32);
 
-    let mut padding = encrypted_secret.len() % block_size;
-    if padding == 0 {
-        padding = block_size;
-    }
-
     if !is_ecb {
         panic!("Not ECB");
     }
 
     let mut output = vec![];
-    let mut offset = 0;
-    while offset < encrypted_secret.len() {
+    let mut offset = skip_length;
+    while offset < encrypted_secret.len() + 16 {
         for i in (0..block_size).rev() {
-            let index = offset + block_size - i - 1;
             // don't try to decrypt padding
-            if index >= encrypted_secret.len() - padding {
-                break;
-            }
             let mut attack_prefix: Vec<u8> = "".as_bytes().to_vec();
             attack_prefix.extend_from_slice(constant_prefix.clone().as_bytes());
             attack_prefix.extend_from_slice("A".repeat(i).as_bytes());
             let encrypted = oracle.encrypt(&attack_prefix);
             attack_prefix.extend_from_slice(&output[..]);
             attack_prefix.push(0);
-            assert_eq!(attack_prefix.len(), offset + block_size);
             let char = (0u8..=255).find(|c| {
                 let len = attack_prefix.len();
                 attack_prefix[len - 1] = c.clone();
@@ -225,12 +219,11 @@ pub fn attack_ecb(oracle: impl Oracle) -> Vec<u8> {
             if let Some(c) = char {
                 output.push(c);
             } else {
-                panic!("Unable to find character");
+                return output;
             }
         }
         offset += block_size;
     }
-
     output
 }
 

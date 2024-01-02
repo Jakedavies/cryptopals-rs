@@ -155,9 +155,8 @@ fn set1_challenge_14() {
         .with_prefix(PREFIX.as_bytes())
         .with_suffix(TARGET.as_bytes());
 
-    info!("target!");
     let secret = attack_ecb(oracle);
-    info!("{}", std::str::from_utf8(&secret).unwrap());
+    info!("target: {}", std::str::from_utf8(&secret).unwrap());
 }
 
 fn main() {

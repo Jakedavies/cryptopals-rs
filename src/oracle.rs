@@ -20,7 +20,6 @@ impl StaticOracle {
         let key = random_key(16);
         //let key = Vec::<u8>::from_hex("65582b210e550f064039646021533269");
         //let key = "0123456789abcdef".as_bytes().to_vec();
-        println!("key: {:?}", key.to_vec().to_hex());
         Self {
             key,
             prefix: vec![],
@@ -34,13 +33,14 @@ impl StaticOracle {
         self
     }
 
-    pub fn with_prefix(mut self, suffix: &[u8]) -> Self {
-        self.prefix.extend_from_slice(suffix);
+    pub fn with_prefix(mut self, prefix: &[u8]) -> Self {
+        self.prefix.extend_from_slice(prefix);
         self
     }
 
     pub fn encrypt(&self, input: &[u8]) -> Vec<u8> {
-        let mut i = self.prefix.clone();
+        let mut i = "".as_bytes().to_vec();
+        i.extend_from_slice(&self.prefix[..]);
         i.extend_from_slice(input);
         i.extend_from_slice(&self.suffix[..]);
         padded_encrypt_aes_128(&i, &self.key)
