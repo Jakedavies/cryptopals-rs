@@ -3,6 +3,7 @@ use std::str::from_utf8;
 use cryptopals::attacks::*;
 use cryptopals::cbc::cbc_decrypt;
 use cryptopals::cbc::cbc_encrypt;
+use cryptopals::oracle::Oracle;
 use cryptopals::challenge_16;
 use cryptopals::cookie::ProfileManager;
 use cryptopals::oracle::StaticOracle;
@@ -166,46 +167,23 @@ fn set1_challenge_14() {
 
 fn set2_challenge_16() {
     let input = "A".repeat(16);
-    let test = challenge_16::encrypt(&input);
+    let oracle = challenge_16::Challenge16::new();
+    let test = oracle.encrypt(&input.as_bytes());
     assert!(!challenge_16::is_admin(&test));
 
+    let input_string = "A".repeat(16) + "AadminAtrueAAAAA"; // 32 bytes, we need to flip bytes 32, 38, 43
     // version 1
-    let mut ciphertext = challenge_16::encrypt("such__data__here");
-    let xor_block = b";admin=true;add="
-        .iter()
-        .zip(b";comment2=%20lik")
-        .map(|(&a, &b)| a ^ b);
+    let mut ciphertext = challenge_16::encrypt(&input_string.as_bytes());
 
-    for (i, x) in xor_block.enumerate() {
-        ciphertext[32 + i] ^= x;
-    }
-
-    // check is admin
-    assert!(challenge_16::is_admin(&ciphertext));
-
-
-    // Version 2?
-    let first_block = &"A".repeat(16);
-    let second_block = &"AadminAtrueA";
-
-    let plaintext = first_block.to_string() + second_block;
-    info!("plaintext: {}", plaintext);
-    let mut ciphertext = challenge_16::encrypt(&plaintext);
-
-    // skip 32 because thats prefix len
-    let offset = 32;
-
-    let a = "A".as_bytes()[0] ^ ";".as_bytes()[0];
-    ciphertext[offset] = ciphertext[offset] ^ a;
-
-    let a = "A".as_bytes()[0] ^ "=".as_bytes()[0];
-    ciphertext[offset + 6] = ciphertext[offset + 6] ^ a;
-
-    let a = "A".as_bytes()[0] ^ ";".as_bytes()[0];
-    ciphertext[offset + 11] = ciphertext[offset + 11] ^ a;
+    // set this character to
+    // by xoring its current value against the previous blocks cipher text
+    // and the desired value
+    //                 A      ;        A
+    ciphertext[32] =  (0x41 ^ 0x3b) ^ ciphertext[32];
+    ciphertext[38] =  (0x41 ^ 0x3d) ^ ciphertext[38];
+    ciphertext[43] =  (0x41 ^ 0x3b) ^ ciphertext[43];
 
     assert!(challenge_16::is_admin(&ciphertext));
-    info!("Broke using method 2");
 }
 
 fn main() {
