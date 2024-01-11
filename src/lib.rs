@@ -4,3 +4,4 @@ pub mod pkcs7;
 pub mod cbc;
 pub mod oracle;
 pub mod cookie;
+pub mod challenge_16;

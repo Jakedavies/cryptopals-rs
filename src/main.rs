@@ -3,6 +3,7 @@ use std::str::from_utf8;
 use cryptopals::attacks::*;
 use cryptopals::cbc::cbc_decrypt;
 use cryptopals::cbc::cbc_encrypt;
+use cryptopals::challenge_16;
 use cryptopals::cookie::ProfileManager;
 use cryptopals::oracle::StaticOracle;
 use cryptopals::pkcs7;
@@ -105,7 +106,6 @@ fn set2_challenge_10() {
     );
 }
 
-
 fn set2_challenge_11() {
     let input = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
     for _ in 0..100 {
@@ -115,7 +115,11 @@ fn set2_challenge_11() {
         random_string.extend_from_slice(&input);
 
         let key = random_key(16);
-        let mode = if rand::random::<bool>() { CipherMode::ECB } else { CipherMode::CBC };
+        let mode = if rand::random::<bool>() {
+            CipherMode::ECB
+        } else {
+            CipherMode::CBC
+        };
         let cipher = match mode {
             CipherMode::ECB => padded_encrypt_aes_128(&random_string, &key),
             CipherMode::CBC => cbc_encrypt(&random_string, &key, &[0; 16]),
@@ -160,6 +164,50 @@ fn set1_challenge_14() {
     assert_eq!(&secret[0..TARGET.len()], TARGET.as_bytes());
 }
 
+fn set2_challenge_16() {
+    let input = "A".repeat(16);
+    let test = challenge_16::encrypt(&input);
+    assert!(!challenge_16::is_admin(&test));
+
+    // version 1
+    let mut ciphertext = challenge_16::encrypt("such__data__here");
+    let xor_block = b";admin=true;add="
+        .iter()
+        .zip(b";comment2=%20lik")
+        .map(|(&a, &b)| a ^ b);
+
+    for (i, x) in xor_block.enumerate() {
+        ciphertext[32 + i] ^= x;
+    }
+
+    // check is admin
+    assert!(challenge_16::is_admin(&ciphertext));
+
+
+    // Version 2?
+    let first_block = &"A".repeat(16);
+    let second_block = &"AadminAtrueA";
+
+    let plaintext = first_block.to_string() + second_block;
+    info!("plaintext: {}", plaintext);
+    let mut ciphertext = challenge_16::encrypt(&plaintext);
+
+    // skip 32 because thats prefix len
+    let offset = 32;
+
+    let a = "A".as_bytes()[0] ^ ";".as_bytes()[0];
+    ciphertext[offset] = ciphertext[offset] ^ a;
+
+    let a = "A".as_bytes()[0] ^ "=".as_bytes()[0];
+    ciphertext[offset + 6] = ciphertext[offset + 6] ^ a;
+
+    let a = "A".as_bytes()[0] ^ ";".as_bytes()[0];
+    ciphertext[offset + 11] = ciphertext[offset + 11] ^ a;
+
+    assert!(challenge_16::is_admin(&ciphertext));
+    info!("Broke using method 2");
+}
+
 fn main() {
     env_logger::builder()
         .filter_level(log::LevelFilter::Info)
@@ -199,4 +247,7 @@ fn main() {
 
     info!("Set 1 Challenge 14");
     set1_challenge_14();
+
+    info!("Set 2 Challenge 16");
+    set2_challenge_16();
 }
