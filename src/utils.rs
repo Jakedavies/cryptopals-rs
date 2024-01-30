@@ -166,6 +166,10 @@ pub fn random_key(size: usize) -> Vec<u8> {
     (0..size).map(|_| rand::random::<u8>()/2).collect()
 }
 
+pub fn safe_string(input: &[u8]) -> String {
+    let a = input.iter().map(|x| *x as char).collect::<String>();
+    a
+}
 
 
 #[cfg(test)]

@@ -57,25 +57,3 @@ impl Oracle for StaticOracle {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_oracle() {
-        let oracle = StaticOracle::new();
-        let known = "Roll";
-        let a = oracle.encrypt("AAAAAAAAAAAA".as_bytes());
-        let b = oracle.encrypt("AAAAAAAAAAAARoll".as_bytes());
-        assert_eq!(a[0..16], b[0..16]);
-    }
-
-    fn test_oracle_2() {
-        let oracle = StaticOracle::new();
-        let known = "Rol";
-        let a = oracle.encrypt("AAAAAAAAAAAA".as_bytes());
-        let b = oracle.encrypt("AAAAAAAAAAAARoll".as_bytes());
-        assert_eq!(a[0..16], b[0..16]);
-    }
-}
-

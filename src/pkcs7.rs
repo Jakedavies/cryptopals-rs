@@ -17,13 +17,16 @@ pub enum StripPaddingError {
 
 pub fn strip_padding(mut bytes: Vec<u8>) -> Result<Vec<u8>, StripPaddingError> {
     let padding = bytes.pop().unwrap();
+    if padding == 0 {
+        return Err(StripPaddingError::InvalidPadding);
+    }
     // make sure all the last $padding bytes are equal to $padding
-    for i in 0..padding-1 {
+    for i in 0..padding.checked_sub(1).unwrap_or(0) {
         if bytes[bytes.len() - 1 - i as usize] != padding {
             return Err(StripPaddingError::InvalidPadding);
         }
     }
-    bytes.resize(bytes.len() - padding as usize + 1, 0);
+    bytes.resize(bytes.len() + 1 - padding as usize, 0);
     Ok(bytes)
 }
 

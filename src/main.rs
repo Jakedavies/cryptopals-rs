@@ -3,8 +3,10 @@ use std::str::from_utf8;
 use cryptopals::attacks::*;
 use cryptopals::cbc::cbc_decrypt;
 use cryptopals::cbc::cbc_encrypt;
+use cryptopals::challenge_17::Challenge17;
 use cryptopals::oracle::Oracle;
 use cryptopals::challenge_16;
+use cryptopals::challenge_17;
 use cryptopals::cookie::ProfileManager;
 use cryptopals::oracle::StaticOracle;
 use cryptopals::pkcs7;
@@ -178,12 +180,21 @@ fn set2_challenge_16() {
     // set this character to
     // by xoring its current value against the previous blocks cipher text
     // and the desired value
-    //                 A      ;        A
+
+    //                 A         ;    old cipher result
     ciphertext[32] =  (0x41 ^ 0x3b) ^ ciphertext[32];
     ciphertext[38] =  (0x41 ^ 0x3d) ^ ciphertext[38];
     ciphertext[43] =  (0x41 ^ 0x3b) ^ ciphertext[43];
 
     assert!(challenge_16::is_admin(&ciphertext));
+}
+
+fn set3_challenge_17() {
+    let oracle = Challenge17::new();
+    let (iv, cipher) = oracle.encrypt_random_input();
+
+    let result = oracle_padding_attack(&iv, &cipher, &oracle);
+    info!("Challenge 17 result: {}", safe_string(&result));
 }
 
 fn main() {
@@ -228,4 +239,7 @@ fn main() {
 
     info!("Set 2 Challenge 16");
     set2_challenge_16();
+
+    info!("Set 3 Challenge 17");
+    set3_challenge_17();
 }

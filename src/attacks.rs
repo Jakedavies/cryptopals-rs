@@ -1,6 +1,7 @@
 use std::{collections::HashMap, error::Error, str::from_utf8};
 
 use crate::{
+    challenge_17::Challenge17,
     oracle::{Oracle, StaticOracle},
     utils::Xor,
     utils::{DetectDuplicate, Hex},
@@ -140,7 +141,7 @@ pub fn get_prefix_length(block_size: usize, oracle: &impl Oracle) -> usize {
         let blocks = cipher.chunks(block_size).collect::<Vec<_>>();
         for i in 1..blocks.len() {
             if blocks[i - 1] == blocks[i] {
-                return (i-1) * block_size - prefix_padding;
+                return (i - 1) * block_size - prefix_padding;
             }
         }
         prefix_padding += 1;
@@ -227,6 +228,55 @@ pub fn attack_ecb(oracle: impl Oracle) -> Vec<u8> {
     output
 }
 
+fn single_block_padding_attack(block: &[u8], oracle: &Challenge17) -> Vec<u8> {
+    let block_size = 16;
+    let mut zeroing_iv: Vec<u8> = vec![0; block_size];
+    for padding in 1..=block_size {
+        let mut found = false;
+        let mut padding_iv = zeroing_iv
+            .clone()
+            .into_iter()
+            .map(|i| i ^ padding as u8)
+            .collect::<Vec<u8>>();
+        for j in 0..=255 {
+            let i = block_size - padding;
+            padding_iv[i] = j;
+            if oracle.is_valid_padding(&padding_iv[..], block) {
+                // change the penultimate byte to make the padding valid
+                let mut test = padding_iv.clone();
+                if i > 0 {
+                    test[i - 1] = test[i - 1] ^ 1;
+                }
+                if oracle.is_valid_padding(&test, block) {
+                    found = true;
+                    zeroing_iv[i] = padding_iv[i] ^ padding as u8;
+                    break;
+                }
+            }
+        }
+        if !found {
+            panic!("Unable to find valid padding");
+        }
+    }
+    zeroing_iv
+}
+
+pub fn oracle_padding_attack(iv: &[u8], cipher: &[u8], oracle: &Challenge17) -> Vec<u8> {
+    let blocks = cipher.chunks(16).collect::<Vec<_>>();
+    
+    let mut result = vec![];
+    let mut iv = iv.to_vec();
+
+    for block in blocks {
+        let mut decrypted = single_block_padding_attack(block, oracle);
+        decrypted.xor(&iv);
+        let plaintext = decrypted.clone();
+        iv = block.to_vec();
+        result.extend_from_slice(&plaintext);
+    }
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use crate::attacks::*;
@@ -242,5 +292,16 @@ mod tests {
     fn test_get_prefix_length() {
         let oracle = StaticOracle::new().with_prefix("SUBMARINE SUBMARINE".as_bytes());
         assert_eq!(get_prefix_length(16, &oracle), 19);
+    }
+
+    #[test]
+    fn test_attack_single_block_padding_oracle() {
+        let oracle = Challenge17::new();
+        let input = "YELLOW SUBMARINE".as_bytes();
+        let (iv, cipher) = oracle.encrypt(&input);
+        let test_block = cipher[0..16].to_vec();
+        let mut result = single_block_padding_attack(&test_block, &oracle);
+        result.xor(&iv);
+        assert_eq!(result[15], input[15]);
     }
 }

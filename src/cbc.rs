@@ -1,9 +1,12 @@
+use log::info;
+
 use crate::{pkcs7, utils::{Xor, decrypt_aes_128, encrypt_aes_128, Hex}};
 
 const BLOCKSIZE: usize = 16;
 
 pub fn cbc_encrypt(input: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
     let mut padded = pkcs7::pad_to_blocksize(input.to_vec(), BLOCKSIZE);
+    info!("last char: {}", padded.last().unwrap());
     let chunks = padded.chunks_mut(BLOCKSIZE);
     let mut previous_ct = iv.to_vec();
 

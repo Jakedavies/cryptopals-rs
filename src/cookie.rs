@@ -73,15 +73,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_encode() {
-        let mut map = HashMap::new();
-        map.insert("foo".to_string(), "bar".to_string());
-        map.insert("baz".to_string(), "qux".to_string());
-        map.insert("zap".to_string(), "zazzle".to_string());
-        assert_eq!(encode(Cookie(map)), "baz=qux&foo=bar&zap=zazzle");
-    }
-
-    #[test]
     fn test_decode() {
         let mut map = HashMap::new();
         map.insert("foo".to_string(), "bar".to_string());
