@@ -3,11 +3,12 @@ use std::str::from_utf8;
 use cryptopals::attacks::*;
 use cryptopals::cbc::cbc_decrypt;
 use cryptopals::cbc::cbc_encrypt;
-use cryptopals::challenge_17::Challenge17;
-use cryptopals::oracle::Oracle;
 use cryptopals::challenge_16;
 use cryptopals::challenge_17;
+use cryptopals::challenge_17::Challenge17;
 use cryptopals::cookie::ProfileManager;
+use cryptopals::ctr::CTROracle;
+use cryptopals::oracle::Oracle;
 use cryptopals::oracle::StaticOracle;
 use cryptopals::pkcs7;
 use cryptopals::utils::*;
@@ -174,7 +175,7 @@ fn set2_challenge_16() {
     assert!(!challenge_16::is_admin(&test));
 
     let input_string = "A".repeat(16) + "AadminAtrueAAAAA"; // 32 bytes, we need to flip bytes 32, 38, 43
-    // version 1
+                                                            // version 1
     let mut ciphertext = challenge_16::encrypt(&input_string.as_bytes());
 
     // set this character to
@@ -182,9 +183,9 @@ fn set2_challenge_16() {
     // and the desired value
 
     //                 A         ;    old cipher result
-    ciphertext[32] =  (0x41 ^ 0x3b) ^ ciphertext[32];
-    ciphertext[38] =  (0x41 ^ 0x3d) ^ ciphertext[38];
-    ciphertext[43] =  (0x41 ^ 0x3b) ^ ciphertext[43];
+    ciphertext[32] = (0x41 ^ 0x3b) ^ ciphertext[32];
+    ciphertext[38] = (0x41 ^ 0x3d) ^ ciphertext[38];
+    ciphertext[43] = (0x41 ^ 0x3b) ^ ciphertext[43];
 
     assert!(challenge_16::is_admin(&ciphertext));
 }
@@ -195,6 +196,35 @@ fn set3_challenge_17() {
 
     let result = oracle_padding_attack(&iv, &cipher, &oracle);
     info!("Challenge 17 result: {}", safe_string(&result));
+}
+
+fn set3_challenge_19() {
+    // read input
+    let input = std::fs::read_to_string("data/19.txt").expect("Unable to read file");
+    let oracle = CTROracle::new([0; 8]);
+
+    let encrypted = input
+        .lines()
+        .map(|line| Vec::<u8>::from_base64(line))
+        .map(|line| oracle.encrypt(&line))
+        .collect_vec();
+
+    let mut decrypted = vec![String::new(); encrypted.len()];
+    for i in 0..encrypted[0].len() {
+        let column = encrypted
+            .iter()
+            .filter_map(|line| line.get(i))
+            .map(|a| *a)
+            .collect_vec();
+
+        let result = attack_single_character_xor(column);
+        let column_decrypted = result.decoded;
+        for (j, val) in column_decrypted.iter().enumerate() {
+            decrypted[j].push(*val as char);
+        }
+    }
+
+    info!("Challenge 19 result: {:?}", decrypted);
 }
 
 fn main() {
@@ -242,4 +272,7 @@ fn main() {
 
     info!("Set 3 Challenge 17");
     set3_challenge_17();
+
+    info!("Set 3 Challenge 19");
+    set3_challenge_19();
 }

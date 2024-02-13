@@ -1,4 +1,4 @@
-use crate::utils::{encrypt_aes_128, Xor};
+use crate::{utils::{encrypt_aes_128, Xor}, oracle::Oracle};
 use byteorder::{BigEndian, ByteOrder, LittleEndian, WriteBytesExt};
 
 fn aes_ctr(input: &[u8], key: &[u8], nonce: &[u8]) -> Vec<u8> {
@@ -22,6 +22,24 @@ fn aes_ctr(input: &[u8], key: &[u8], nonce: &[u8]) -> Vec<u8> {
     }
     // trim the output to the length of the input
     output[..input.len()].to_vec()
+}
+
+pub struct CTROracle {
+    key: Vec<u8>,
+    nonce: [u8; 8],
+}
+
+impl CTROracle {
+    pub fn new(nonce: [u8; 8]) -> Self {
+        let key = crate::utils::random_key(16);
+        CTROracle { key, nonce }
+    }
+}
+
+impl Oracle for CTROracle {
+    fn encrypt(&self, input: &[u8]) -> Vec<u8> {
+        return aes_ctr(input, &self.key, &self.nonce);
+    }
 }
 
 #[cfg(test)]
