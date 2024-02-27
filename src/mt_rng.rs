@@ -69,7 +69,7 @@ mod tests {
 
     #[test]
     fn test_seeded_mt() {
-        let mut rng = rng(5489_u32);
+        let mut rng = rng(5489_u32); // Default seed for C++ implementation
         assert_eq!(rng.int(), 3499211612);
         assert_eq!(rng.int(), 581869302);
     }
