@@ -7,8 +7,6 @@ const M: usize = 397;
 const R: usize = 31;
 const A: u32 = 0x9908B0DF;
 
-const L: u32 = 18;
-
 const F: u32 = 1812433253;
 
 const LOWER_MASK: u32 = (1 << R) -1;
