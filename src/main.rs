@@ -8,6 +8,7 @@ use cryptopals::challenge_17;
 use cryptopals::challenge_17::Challenge17;
 use cryptopals::cookie::ProfileManager;
 use cryptopals::ctr::CTROracle;
+use cryptopals::mt_rng::rng;
 use cryptopals::oracle::Oracle;
 use cryptopals::oracle::StaticOracle;
 use cryptopals::pkcs7;
@@ -211,7 +212,7 @@ fn set3_challenge_19() {
 
     let mut decrypted = vec![String::new(); encrypted.len()];
     let min_encrypted_len = encrypted.iter().map(|a| a.len()).min().unwrap();
-    for i in 0..min_encrypted_len{
+    for i in 0..min_encrypted_len {
         let column = encrypted
             .iter()
             .filter_map(|line| line.get(i))
@@ -226,6 +227,23 @@ fn set3_challenge_19() {
     }
 
     info!("Challenge 19 result: {:?}", decrypted);
+}
+
+fn set3_challenge_21() {
+    let current_time = std::time::SystemTime::now();
+    let seed = current_time
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as u32;
+    let mut rng = rng(seed);
+    let seed_range = (seed - 1000, seed + 1000); // pretend we only roughly know the seed
+    let first = rng.int();
+    let found_seed = brute_force_mt19377_seed(seed_range, first);
+    if let Some(found_seed) = found_seed {
+        info!("Seed found: {}, expected seed: {}", seed, found_seed);
+    } else {
+        panic!("Seed not found");
+    }
 }
 
 fn main() {
@@ -276,4 +294,7 @@ fn main() {
 
     info!("Set 3 Challenge 19");
     set3_challenge_19();
+
+    info!("Set 3 Challenge 21");
+    set3_challenge_21();
 }

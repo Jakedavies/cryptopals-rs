@@ -277,6 +277,18 @@ pub fn oracle_padding_attack(iv: &[u8], cipher: &[u8], oracle: &Challenge17) -> 
     result
 }
 
+// given the first output from a seeded mt19937 rng, determine the seed
+pub fn brute_force_mt19377_seed(seed_space: (u32, u32), output: u32) -> Option<u32> {
+    // brute force the whole u32 seed space
+    for seed in seed_space.0..seed_space.1 {
+        let mut rng = crate::mt_rng::rng(seed);
+        if rng.int() == output {
+            return Some(seed);
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use crate::attacks::*;
