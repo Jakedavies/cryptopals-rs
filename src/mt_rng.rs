@@ -72,4 +72,15 @@ mod tests {
         assert_eq!(rng.int(), 581869302);
     }
 
+
+    #[test]
+    fn never_diverges_100000() {
+        let mut rng1 = rng(5489_u32);
+        let mut rng2 = rng(5489_u32);
+
+        for _ in 0..100000 {
+            assert_eq!(rng1.int(), rng2.int());
+        }
+    }
+
 }
