@@ -13,7 +13,7 @@ const LOWER_MASK: u32 = (1 << R) -1;
 const UPPER_MASK: u32 = !LOWER_MASK;
 
 
-struct Mt19937 {
+pub struct Mt19937 {
     state: [Wrapping<u32>; N],
     index: usize,
 }
@@ -31,7 +31,7 @@ impl Mt19937 {
         self.index = 0;
     }
 
-    fn int(&mut self) -> u32 {
+    pub fn int(&mut self) -> u32 {
         if self.index >= N {
             self.twist();
         }
@@ -49,7 +49,7 @@ impl Mt19937 {
 }
 
 
-fn rng(seed: u32) -> Mt19937 {
+pub fn rng(seed: u32) -> Mt19937 {
     let mut rng = Mt19937 {
         state: [Wrapping(0); N],
         index: N,
