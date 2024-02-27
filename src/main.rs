@@ -210,7 +210,8 @@ fn set3_challenge_19() {
         .collect_vec();
 
     let mut decrypted = vec![String::new(); encrypted.len()];
-    for i in 0..encrypted[0].len() {
+    let min_encrypted_len = encrypted.iter().map(|a| a.len()).min().unwrap();
+    for i in 0..min_encrypted_len{
         let column = encrypted
             .iter()
             .filter_map(|line| line.get(i))
